@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "payment": {
+            "command": "python",
+            "args": [
+                "/Users/cpinzonpinto/Documents/PaymentMCP/mcp_server.py"
+            ],
+            "env": {
+                "PAYMENT_API_URL": "http://localhost:8000"
+            }
+        }
+    }
+}
