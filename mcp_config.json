@@ -3,10 +3,11 @@
         "payment": {
             "command": "python",
             "args": [
-                "/Users/cpinzonpinto/Documents/PaymentMCP/mcp_server.py"
+                "c:\\Dev\\checkoutMCP\\mcp_server.py"
             ],
             "env": {
-                "PAYMENT_API_URL": "http://localhost:8000"
+                "PAYMENT_API_URL": "http://localhost:8000",
+                "STG_URL": "https://stg.checkout1.worklearngrow.online"
             }
         }
     }

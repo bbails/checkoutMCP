@@ -12,6 +12,7 @@ import httpx
 
 # Payment API configuration
 PAYMENT_API_URL = os.getenv("PAYMENT_API_URL", "http://localhost:8000")
+STG_URL = os.getenv("STG_URL", "http://localhost:9000")
 
 
 class PaymentMCPServer:
@@ -19,6 +20,7 @@ class PaymentMCPServer:
 
     def __init__(self, api_url: str = PAYMENT_API_URL):
         self.api_url = api_url
+        self.stg_api_url = STG_URL
         self.client = httpx.Client(timeout=30.0)
 
     def get_tools(self) -> List[Dict[str, Any]]:
@@ -197,6 +199,18 @@ class PaymentMCPServer:
                     },
                 },
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_health",
+                    "description": "Test for STG connection",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                    },
+                },
+            }
         ]
 
     def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
@@ -214,6 +228,8 @@ class PaymentMCPServer:
                 return self._refund_transaction(arguments)
             elif tool_name == "get_token_info":
                 return self._get_token_info(arguments)
+            elif tool_name == "get_health":
+                return self._get_stg_health()
             else:
                 return json.dumps({"error": f"Unknown tool: {tool_name}"})
         except Exception as e:
@@ -297,6 +313,12 @@ class PaymentMCPServer:
         """Get token information."""
         token = args["token"]
         response = self.client.get(f"{self.api_url}/api/v1/tokens/{token}")
+        response.raise_for_status()
+        return json.dumps(response.json(), indent=2)
+    
+    def _get_stg_health(self) -> str:
+        """Get STG health status."""
+        response = self.client.get("https://stg.checkout1.worklearngrow.online/tenant/health/self")
         response.raise_for_status()
         return json.dumps(response.json(), indent=2)
 
