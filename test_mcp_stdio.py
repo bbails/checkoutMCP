@@ -37,7 +37,7 @@ def test_mcp_server():
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        cwd="/Users/cpinzonpinto/Documents/PaymentMCP",
+        cwd="C:\\Dev\\checkoutMCP",
     )
 
     time.sleep(1)  # Give server time to start
@@ -105,6 +105,13 @@ def test_mcp_server():
         print("  • Claude Desktop")
         print("  • Microsoft Copilot Studio")
         print("\nSee MCP_CONFIGURATION.md for setup instructions.")
+
+        # Test 4: Health Check
+        print("\n[Test 4] Health Check")
+        print("-" * 70)
+        request = {"jsonrpc": "2.0", "id": 4, "method": "get_health", "params": {}}
+        response = send_request(process, request)
+        print(f"✓ Response: {json.dumps(response, indent=2)}")
 
     finally:
         # Cleanup
