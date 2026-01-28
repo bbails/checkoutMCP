@@ -12,7 +12,7 @@ import httpx
 
 # Payment API configuration
 PAYMENT_API_URL = os.getenv("PAYMENT_API_URL", "http://localhost:8000")
-STG_URL = os.getenv("STG_URL", "http://localhost:9000")
+STG_URL = os.getenv("STG_API_URL", os.getenv("STG_URL", "http://localhost:9000"))
 
 
 class PaymentMCPServer:
