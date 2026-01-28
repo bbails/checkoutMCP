@@ -4,6 +4,9 @@ FROM python:3.9-slim
 # Set working directory
 WORKDIR /app
 
+# Install bash (for wait -n support)
+RUN apt-get update && apt-get install -y --no-install-recommends bash && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements file
 COPY requirements.txt .
 
@@ -19,8 +22,8 @@ COPY mcp_server.py .
 COPY mcp_api_server.py .
 COPY start.sh .
 
-# Make startup script executable
-RUN chmod +x start.sh
+# Fix line endings (Windows CRLF to Unix LF) and make executable
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
 # Expose both ports
 EXPOSE 8000 8001
