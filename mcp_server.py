@@ -318,7 +318,7 @@ class PaymentMCPServer:
     
     def _get_stg_health(self) -> str:
         """Get STG health status."""
-        response = self.client.get("https://stg.checkout1.worklearngrow.online/tenant/health/self")
+        response = self.client.get(f"{self.stg_api_url}/tenant/health/self")
         response.raise_for_status()
         return json.dumps(response.json(), indent=2)
 
