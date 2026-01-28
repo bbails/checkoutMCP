@@ -10,6 +10,7 @@ services:
     environment:
       - PAYMENT_API_URL=http://localhost:8000
       - MCP_API_URL=http://localhost:8001
+      - STG_API_URL=https://stg.checkout1.worklearngrow.online
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

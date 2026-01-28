@@ -28,6 +28,7 @@ EXPOSE 8000 8001
 # Set environment variables
 ENV PAYMENT_API_URL=http://localhost:8000
 ENV MCP_API_URL=http://localhost:8001
+ENV STG_API_URL=https://stg.checkout1.worklearngrow.online
 
 # Run the startup script
 CMD ["./start.sh"]
