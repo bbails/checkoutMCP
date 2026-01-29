@@ -3,14 +3,17 @@ Payment MCP Server - FastAPI HTTP Wrapper
 
 This FastAPI application exposes the MCP server functionality as HTTP REST endpoints,
 allowing you to use the MCP tools via HTTP requests instead of stdio.
+Also supports MCP protocol with SSE for Azure AI Foundry integration.
 """
 
-from fastapi import FastAPI, HTTPException
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 import json
+import asyncio
 
 from mcp_server import PaymentMCPServer, get_payment_tools, execute_payment_function
 
@@ -105,7 +108,7 @@ def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.utcnow().isoformat(),
         "mcp_server": "running",
         "payment_api": "connected",
     }
@@ -265,9 +268,117 @@ def get_token_info_direct(token: str):
     return json.loads(result)
 
 
+# MCP Protocol SSE Endpoint for Azure AI Foundry
+@app.post("/mcp")
+async def mcp_protocol_endpoint(request: Request):
+    """
+    MCP Protocol endpoint with SSE support for Azure AI Foundry.
+
+    This endpoint implements the MCP protocol over HTTP with Server-Sent Events.
+    It handles JSON-RPC 2.0 messages for initialize, tools/list, and tools/call.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON in request body")
+
+    jsonrpc = body.get("jsonrpc", "2.0")
+    request_id = body.get("id")
+    method = body.get("method")
+    params = body.get("params", {})
+
+    async def event_generator():
+        """Generate SSE events for MCP protocol"""
+        try:
+            if method == "initialize":
+                response = {
+                    "jsonrpc": jsonrpc,
+                    "id": request_id,
+                    "result": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {
+                            "name": "payment-mcp-server",
+                            "version": "1.0.0",
+                        },
+                    },
+                }
+                yield f"data: {json.dumps(response)}\n\n"
+
+            elif method == "tools/list":
+                tools = get_payment_tools()
+                mcp_tools = []
+                for tool in tools:
+                    func = tool["function"]
+                    mcp_tools.append(
+                        {
+                            "name": func["name"],
+                            "description": func["description"],
+                            "inputSchema": func["parameters"],
+                        }
+                    )
+
+                response = {
+                    "jsonrpc": jsonrpc,
+                    "id": request_id,
+                    "result": {"tools": mcp_tools},
+                }
+                yield f"data: {json.dumps(response)}\n\n"
+
+            elif method == "tools/call":
+                tool_name = params.get("name")
+                arguments = params.get("arguments", {})
+
+                # Execute the tool
+                result = execute_payment_function(tool_name, json.dumps(arguments))
+
+                response = {
+                    "jsonrpc": jsonrpc,
+                    "id": request_id,
+                    "result": {
+                        "content": [{"type": "text", "text": result}],
+                        "isError": False,
+                    },
+                }
+                yield f"data: {json.dumps(response)}\n\n"
+
+            else:
+                error_response = {
+                    "jsonrpc": jsonrpc,
+                    "id": request_id,
+                    "error": {
+                        "code": -32601,
+                        "message": f"Method not found: {method}",
+                    },
+                }
+                yield f"data: {json.dumps(error_response)}\n\n"
+
+        except Exception as e:
+            error_response = {
+                "jsonrpc": jsonrpc,
+                "id": request_id,
+                "error": {
+                    "code": -32603,
+                    "message": f"Internal error: {str(e)}",
+                },
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
         "mcp_api_server:app", host="0.0.0.0", port=8001, reload=True, log_level="info"
     )
+ 
